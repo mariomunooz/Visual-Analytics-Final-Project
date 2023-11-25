@@ -1,0 +1,26 @@
+{
+    "id": "68CECFE9",
+    "path": "~/Github/Visual-Analytics/Labs/Final project/Labels computation/compute_season_and_career_outcomes_.R",
+    "project_path": "compute_season_and_career_outcomes_.R",
+    "type": "r_source",
+    "hash": "2820419397",
+    "contents": "",
+    "dirty": false,
+    "created": 1700686718091.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "0,0",
+        "scrollLine": "0"
+    },
+    "folds": "249|37|262|0|\n265|63|273|0|\n279|58|284|0|\n286|55|297|0|\n299|50|328|0|\n332|54|351|0|\n",
+    "lastKnownWriteTime": 1700738310,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1700738310873,
+    "read_only": false,
+    "read_only_alternatives": []
+}

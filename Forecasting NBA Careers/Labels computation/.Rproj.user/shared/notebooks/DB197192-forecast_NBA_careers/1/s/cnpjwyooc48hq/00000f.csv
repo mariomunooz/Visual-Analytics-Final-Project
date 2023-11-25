@@ -1,0 +1,6 @@
+"0","library(tidyverse)"
+"0","library(dplyr)"
+"0",""
+"0",""
+"0","awards <- read_csv(""Collected data/awards_clean.csv"")"
+"0","player_data <- read_csv(""Collected data/awards_clean.csv"")"

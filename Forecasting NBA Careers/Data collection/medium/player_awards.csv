@@ -1,0 +1,6 @@
+PERSON_ID,FIRST_NAME,LAST_NAME,TEAM,DESCRIPTION,ALL_NBA_TEAM_NUMBER,SEASON,MONTH,WEEK,CONFERENCE,TYPE,SUBTYPE1,SUBTYPE2,SUBTYPE3
+1628983,Shai,Gilgeous-Alexander,LA Clippers,All-Rookie Team,2,2018-19,,,West,Award,Kia Motors,KIART,
+1628983,Shai,Gilgeous-Alexander,Oklahoma City Thunder,NBA Player of the Week,,2021-22,,2021-12-20T00:00:00,West,Award,Kia Motors,KIPWK,
+1628983,Shai,Gilgeous-Alexander,Oklahoma City Thunder,NBA Player of the Week,,2022-23,,2023-02-06T00:00:00,West,Award,Kia Motors,KIPWK,
+1628983,Shai,Gilgeous-Alexander,Oklahoma City Thunder,NBA Player of the Week,,2022-23,,2022-10-24T00:00:00,West,Award,Kia Motors,KIPWK,
+1628983,Shai,Gilgeous-Alexander,Oklahoma City Thunder,All-NBA,1,2022-23,,,West,Award,Kia Motors,KIANT,

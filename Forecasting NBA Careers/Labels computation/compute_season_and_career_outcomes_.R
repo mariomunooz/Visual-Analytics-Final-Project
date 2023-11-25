@@ -1,0 +1,373 @@
+library(tidyverse)
+library(dplyr)
+options(max.print = 1000)
+awards <- read_csv("Collected data/awards_clean.csv")
+player_data <- read_csv("Collected data/player_stats_clean.csv")
+
+
+# RENAME COLUMNS
+
+# Rename multiple columns using direct assignment
+awards$Defensive_Player_Of_The_Year_rk <- awards$Defensive_Player_of_The_Year
+awards$Most_Valuable_Player_rk <- awards$Most_Valuable_Player
+
+
+# Remove old columns
+awards <- awards[, !names(awards) %in% c("Defensive_Player_of_The_Year", "Most_Valuable_Player")]
+
+
+# REMOVE PLAYERS THAT HAVE PLAYED 0 MINUTES IN A CERTAIN SEASON
+
+player_data <- player_data[player_data$mins != 0, ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+first_NBA_season_In_data = min(as.integer(player_data$season))
+last_NBA_season_In_data = max(as.integer(player_data$season))
+
+
+rename_columns_with_underscore <- function(dataframe) {
+  new_colnames <- gsub(" ", "_", colnames(dataframe))
+  colnames(dataframe) <- new_colnames
+  return(dataframe)
+}
+
+awards <- rename_columns_with_underscore(awards)
+
+
+
+add_is_all_NBA_selected_binary <- function(awards_df) {
+  
+  # Convert all_star_game to binary
+  awards_df$all_star_game <- as.integer(awards_df$all_star_game)
+  
+  # Get which players have been selected in the All NBA First, Second or Third Team
+  is_all_NBA_selected = (awards_df$All_NBA_First_Team == 1 | awards_df$All_NBA_Second_Team == 1 | awards_df$All_NBA_Third_Team == 1)
+  awards_df$All_NBA_Selected <- as.numeric(is_all_NBA_selected)
+  awards_df <- awards_df %>% relocate(All_NBA_Selected, .after = All_NBA_Third_Team)
+  
+  return(awards_df)
+}
+
+add_DPOY_and_MVP_binary <- function(awards_df){
+  # Get which players have been awarded with the MVP and also which players with the DPOY
+  # Converting rk to a binary columns
+  awards_df <- awards_df %>%
+    group_by(season) %>%
+    mutate(Defensive_Player_Of_The_Year = ifelse(Defensive_Player_Of_The_Year_rk != 1, 0, Defensive_Player_Of_The_Year_rk),
+           Most_Valuable_Player = ifelse(Most_Valuable_Player_rk != 1, 0, Most_Valuable_Player_rk)) %>%
+    ungroup() %>%
+    relocate(Defensive_Player_Of_The_Year, .after = Defensive_Player_Of_The_Year_rk) %>%
+    relocate(Most_Valuable_Player, .after = Most_Valuable_Player_rk)
+  
+  return(awards_df)
+}
+
+init_awards_df <- function(awards_df) {
+  
+  # Select required variables
+  selection = c("season", "nbapersonid", "All_NBA_First_Team", "All_NBA_Second_Team", "All_NBA_Third_Team", "all_star_game", "Defensive_Player_Of_The_Year_rk", "Most_Valuable_Player_rk")
+  awards_df <- awards_df[, selection]
+  
+  # Add column to know which players have been all nba
+  awards_df <- add_is_all_NBA_selected_binary(awards_df)
+  # And another to know which ones DPOY and MVP
+  awards_df <- add_DPOY_and_MVP_binary(awards_df)
+  
+  return(awards_df)
+}
+
+init_players_data_and_awards <- function(players_df, awards_df){
+  
+  # Join awards info to player data
+  selection = c('nbapersonid', 'player', 'draftyear', 'draftpick', 'season', 'nbateamid', 'team', 'games', 'games_start', 'mins')
+  players_df <- players_df[, selection]
+  players_and_awd_df <- left_join(players_df, awards_df, by = c("nbapersonid", "season"), relationship = "many-to-many")
+  
+  # Convert NA to 0 to avoid future problems
+  
+  columns_to_fix <- c("All_NBA_First_Team", "All_NBA_Second_Team", "All_NBA_Third_Team","All_NBA_Selected", "all_star_game", "Defensive_Player_Of_The_Year", "Defensive_Player_Of_The_Year_rk", "Most_Valuable_Player_rk", "Most_Valuable_Player")
+  players_and_awd_df <- players_and_awd_df %>%
+    mutate(across(all_of(columns_to_fix), ~ coalesce(., 0)))
+  
+  return(players_and_awd_df)
+}
+
+adjust_minutes_and_games_start <- function(players_and_awd_df){
+  
+  players_and_awd_df <- players_and_awd_df %>%
+    mutate(
+      mins_adjusted = case_when(
+        season == 2011 ~ round(mins * (82/66)),
+        season %in% c(2019, 2020) ~ round(mins * (82/72)),
+        season == 1998 ~ round(mins * (82/50)),  # Adjust for 1998 season with 82/50 factor
+        TRUE ~ mins
+      ),
+      games_start_adjusted = case_when(
+        season == 2011 ~ round(games_start * (82/66)),
+        season %in% c(2019, 2020) ~ round(games_start * (82/72)),
+        season == 1998 ~ round(games_start * (82/50)),  # Adjust for 1998 season with 82/50 factor
+        TRUE ~ games_start
+      )
+    ) %>%
+    relocate(mins_adjusted, .after = mins) %>%
+    relocate(games_start_adjusted, .after = games_start)
+  
+  return(players_and_awd_df)
+}
+
+
+# Compute season outcome taking into account possible team changes
+compute_season_outcome_column <- function(data) {
+  result <- data
+  
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(isRoster = ifelse(sum(mins_adjusted) >= 1, "Roster", NA)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(isRotation = ifelse(sum(mins_adjusted) >= 1000, "Rotation" , NA)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(isStarter = ifelse(sum(games_start_adjusted) >= 41 || sum(mins_adjusted) >= 2000, "Starter" , NA)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(isAllStar = ifelse(any(all_star_game == 1), "All-Star" , NA)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(isElite = ifelse(any(All_NBA_Selected == 1) || any(Most_Valuable_Player == 1) || any(Defensive_Player_Of_The_Year == 1), "Elite" , NA)) %>% ungroup()
+  
+  result <- result %>% rowwise() %>% mutate(season_outcome_list = paste(na.omit(c_across(isRoster:isElite)), collapse = ", "))
+  
+  
+  
+  
+  ########
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(season_outcome = ifelse(sum(mins_adjusted) >= 1, "Roster", season_outcome)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(season_outcome = ifelse(sum(mins_adjusted) >= 1000, "Rotation" , season_outcome)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(season_outcome = ifelse(sum(games_start_adjusted) >= 41 || sum(mins_adjusted) >= 2000, "Starter" , season_outcome)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(season_outcome = ifelse(any(all_star_game == 1), "All-Star" , season_outcome)) %>% ungroup()
+  
+  result <- result %>% group_by(nbapersonid, season) %>% mutate(season_outcome = ifelse(any(All_NBA_Selected == 1) || any(Most_Valuable_Player == 1) || any(Defensive_Player_Of_The_Year == 1), "Elite" , season_outcome)) %>% ungroup()
+  
+  return(result)
+}
+
+add_out_of_the_league_seasons <- function(players_and_awd_df){
+  
+  
+  # For each player id add all sample seasons
+  all_combinations_df <- expand.grid(
+    nbapersonid = unique(players_and_awd_df$nbapersonid),
+    season = first_NBA_season_In_data:last_NBA_season_In_data
+  )
+  
+  # Obtain the info (name, draft year ...) of each player
+  player_info_df <- players_and_awd_df %>% distinct(nbapersonid, .keep_all = TRUE)
+  
+  # Join the info with each id
+  all_combinations_df <- inner_join(all_combinations_df, player_info_df, by = "nbapersonid",suffix = c("", ".orig"), relationship = "many-to-many")
+  
+  
+  selection = c("nbapersonid", "player", "draftyear", "draftpick", "season")
+  all_combinations_df <- all_combinations_df[, selection]
+  
+  # If we have data for a player in certain season we add them
+  players_and_awd_df <- left_join(all_combinations_df, players_and_awd_df, by = c("nbapersonid", "season"), suffix = c("", ".orig"), relationship = "many-to-many")
+  
+  players_and_awd_df <- players_and_awd_df %>% select(-ends_with(".orig"))
+  
+  # If a player has no team in a season he is out of the league
+  players_and_awd_df <- players_and_awd_df %>% mutate(season_outcome = ifelse(is.na(nbateamid), "Out of the League", season_outcome))
+  players_and_awd_df <- players_and_awd_df %>% mutate(season_outcome_list = ifelse(is.na(nbateamid), "Out of the League", season_outcome_list))
+  return(players_and_awd_df)
+  
+}
+
+
+
+
+
+compute_season_outcome <- function(awards_df, players_df) {
+  
+  awards_df <- init_awards_df(awards_df)
+  
+  players_and_awd_df <- init_players_data_and_awards(players_df, awards_df)
+  
+  players_and_awd_df <- adjust_minutes_and_games_start(players_and_awd_df)
+  
+  players_and_awd_df <- compute_season_outcome_column(players_and_awd_df)
+  
+  players_and_awd_df <- add_out_of_the_league_seasons(players_and_awd_df)
+  
+  
+  players_and_awd_df <- players_and_awd_df %>% group_by(nbapersonid, season) %>% distinct(nbapersonid, season, .keep_all = TRUE) %>% ungroup()
+  
+  selection = c("nbapersonid", "player", "draftyear", "draftpick", "season", "season_outcome_list", "season_outcome")
+  
+  
+  return(players_and_awd_df[, selection])
+}
+
+#----------------------------------------
+season_outcome_data <- compute_season_outcome(awards, player_data)
+
+
+
+# ..........................
+
+######################
+#######################
+#######################
+########################above okey
+
+# Function to find the first non- "Out of the League" column name in a row
+find_first_non_out <- function(...) {
+  years <- first_NBA_season_In_data:last_NBA_season_In_data
+  columns_to_check <- paste0("s_outc_", years)
+  
+  first_non_out <- which(c(...) != "Out of the League")[1]
+  if (!is.na(first_non_out)) {
+    col_name <- columns_to_check[first_non_out]
+    numeric_part <- as.numeric(gsub("\\D", "", col_name))  # Extract numeric part
+    as.character(numeric_part)
+    
+  } else {
+    NA
+  }
+}
+
+
+add_first_nba_season_in_dataset <- function(career_outcome_df){
+  years <- first_NBA_season_In_data:last_NBA_season_In_data
+  columns_to_check <- paste0("s_outc_", years)
+  career_outcome_df <- career_outcome_df %>% mutate(first_nba_season_in_dataset = pmap_chr(select(., all_of(columns_to_check)), find_first_non_out))
+  
+  career_outcome_df$first_nba_season_in_dataset <- as.numeric(career_outcome_df$first_nba_season_in_dataset)
+  return(career_outcome_df)
+  
+}
+
+
+
+
+
+check_possible_career_outcome <- function(df_row, string){
+  
+  at_least_two_columns <- sum(apply(df_row, 2, function(col) grepl(string, col))) >= 2
+  
+  return(at_least_two_columns)
+}
+
+check_all_possible_career_outcomes <- function(df_row){
+  result <- case_when(
+    check_possible_career_outcome(df_row, "Elite") ~ "Elite",
+    check_possible_career_outcome(df_row, "All-Star") ~ "All-Star",
+    check_possible_career_outcome(df_row, "Starter") ~ "Starter",
+    check_possible_career_outcome(df_row, "Rotation") ~ "Rotation",
+    check_possible_career_outcome(df_row, "Roster") ~ "Roster",
+    TRUE ~ "Out of the League"
+  )
+  
+  return(result)
+}
+
+add_career_outcome <- function(career_outcome_df){
+  
+  career_outcome_df$career_outcome <- NA
+  
+  
+  for (i in 1:nrow(career_outcome_df)) {
+    
+    
+    
+    first_season_study <- (career_outcome_df[i, "first_nba_season_in_dataset"] + 4)
+    
+    if(first_season_study >= last_NBA_season_In_data){ career_outcome_df[i, "career_outcome"] = "Out of the League"
+    next
+    }
+    
+    years <- first_season_study:last_NBA_season_In_data
+    cols <- paste0("s_outc_list_", years)
+    
+    # Extract the relevant columns between start_column and end_column
+    columns_to_check <- career_outcome_df[i, cols]
+    
+    
+    
+    career_outcome_df[i, "career_outcome"] <- check_all_possible_career_outcomes(columns_to_check)
+    
+    
+  }
+  
+  return(career_outcome_df)
+}
+
+
+
+compute_career_outcome <- function(season_outcome_df){
+  
+  selection <- setdiff(names(season_outcome_data), "season_outcome")
+  pivot_s_ouctc_list <- season_outcome_data[, selection] %>% group_by(nbapersonid) %>% pivot_wider(names_from = season, values_from = season_outcome_list, names_prefix = "s_outc_list_") %>% ungroup()
+  
+  selection <- c("nbapersonid", "season", "season_outcome")
+  pivot_s_ouctc <- season_outcome_data[, selection] %>% group_by(nbapersonid) %>% pivot_wider(names_from = season, values_from = season_outcome, names_prefix = "s_outc_") %>% ungroup()
+  
+  career_outcome_df <- merge(pivot_s_ouctc_list, pivot_s_ouctc, by = "nbapersonid")
+  
+  career_outcome_df <- add_first_nba_season_in_dataset(career_outcome_df)
+  
+  
+  career_outcome_df <- add_career_outcome(career_outcome_df)
+  
+  selection = c("nbapersonid", "player", "draftyear", "draftpick", "career_outcome")
+  
+  return(career_outcome_df[, selection])
+  
+}
+
+career_outcome_data <- compute_career_outcome(season_outcome_data)
+
+
+
+
+
+
+
+
+
+# Count the number of NA values in each column
+null_counts <- colSums(is.na(career_outcome_data))
+
+# Print the number of nulls per column
+print(null_counts)
+
+category_counts <- table(career_outcome_data$career_outcome)
+
+# Print the number of appearances of each category
+print(category_counts)
