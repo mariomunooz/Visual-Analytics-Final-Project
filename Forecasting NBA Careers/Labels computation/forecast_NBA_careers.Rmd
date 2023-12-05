@@ -1,8 +1,10 @@
 ---
-title: 'Using Random Forests to Forecast NBA Careers'
-output: html_document
+title: "Using Random Forests to Forecast NBA Careers"
 author: "Mario Muñoz Serrano and Gael Ribes"
 date: "`r format(Sys.Date(), '%m/%d/%y')`"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r set options, include=FALSE}
@@ -564,6 +566,7 @@ compute_career_outcome <- function(season_outcome_df){
 
 ```{r}
 career_outcome_data <- compute_career_outcome(season_outcome_data)
+
 ```
 
 
@@ -794,6 +797,10 @@ career_outcome_model <- subset(career_outcome_data, draftyear >= first_NBA_seaso
 
 season_outcome_model <- subset(season_outcome_data, draftyear >= first_NBA_season_In_data)
 player_data_model <- subset(player_data, draftyear >= first_NBA_season_In_data)
+
+write.csv(career_outcome_model, file = "career_outcome_model.csv", row.names = FALSE)
+write.csv(season_outcome_model, file = "season_outcome_model.csv", row.names = FALSE)
+write.csv(player_data_model, file = "player_data_model.csv", row.names = FALSE)
 
 
 

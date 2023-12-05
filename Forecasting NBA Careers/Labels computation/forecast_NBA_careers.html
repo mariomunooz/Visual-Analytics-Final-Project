@@ -11,7 +11,7 @@
 
 <meta name="author" content="Mario Muñoz Serrano and Gael Ribes" />
 
-<meta name="date" content="2023-12-04" />
+<meta name="date" content="2023-12-05" />
 
 <title>Using Random Forests to Forecast NBA Careers</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Using Random Forests to Forecast NBA
 Careers</h1>
 <h4 class="author">Mario Muñoz Serrano and Gael Ribes</h4>
-<h4 class="date">12/04/23</h4>
+<h4 class="date">12/05/23</h4>
 
 </div>
 
@@ -1555,7 +1555,11 @@ print(category_counts)</code></pre>
 career_outcome_model &lt;- subset(career_outcome_data, draftyear &gt;= first_NBA_season_In_data)
 
 season_outcome_model &lt;- subset(season_outcome_data, draftyear &gt;= first_NBA_season_In_data)
-player_data_model &lt;- subset(player_data, draftyear &gt;= first_NBA_season_In_data)</code></pre>
+player_data_model &lt;- subset(player_data, draftyear &gt;= first_NBA_season_In_data)
+
+write.csv(career_outcome_model, file = &quot;career_outcome_model.csv&quot;, row.names = FALSE)
+write.csv(season_outcome_model, file = &quot;season_outcome_model.csv&quot;, row.names = FALSE)
+write.csv(player_data_model, file = &quot;player_data_model.csv&quot;, row.names = FALSE)</code></pre>
 <pre class="r"><code>model_data &lt;- prepare_model_data(season_outcome_model, career_outcome_model, player_data_model)</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;nbapersonid&#39;. You can override using the
 ## `.groups` argument.</code></pre>
