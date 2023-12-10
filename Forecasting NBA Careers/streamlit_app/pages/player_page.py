@@ -154,7 +154,7 @@ axs[1].legend()
 
 axs[2].plot(years, ftp, marker='o', label='Field Goal %')
 axs[2].plot(years, np.array(mean_perc_y["ftp"]), label='Mean Free throw %', linestyle='--')
-axs[2].plot(years, np.array(mean_perc_t["ftp"]), label='Mean Field Goal %', linestyle='--')
+axs[2].plot(years, np.array(mean_perc_t["ftp"]), label='Mean Field Goal %', linestyle='dotted')
 axs[2].set_title('sin(x)')
 axs[2].set_xlabel('X-axis')
 axs[2].set_ylabel('Y-axis')
