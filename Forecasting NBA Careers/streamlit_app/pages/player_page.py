@@ -5,6 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.tri as tri
+from PIL import Image
+import requests
+from io import BytesIO
 
 st.set_page_config(
 page_title="Data Exploration",
@@ -32,6 +35,7 @@ def hex_plot2(proportions1, proportions2, labels):
         ax.tripcolor(triang_backgr, colors, cmap=cmap, shading='gouraud', alpha=0.4)
         ax.tripcolor(triang_foregr, colors, cmap=cmap, shading='gouraud', alpha=0.8)
         ax.triplot(triang_backgr, color='white', lw=2)
+        
         for label, color, xi, yi in zip(labels, colors, x, y):
             ax.text(xi * 1.05, yi * 1.05, label,
                     ha='left' if xi > 0.1 else 'right' if xi < -0.1 else 'center',
@@ -48,10 +52,23 @@ def hex_plot2(proportions1, proportions2, labels):
     
     return fig
 
+def display_image_from_url(player_data_df):
+    pl_nbapersonid = player_data_df['nbapersonid'].iloc[0]
+    try:
+        response = requests.get(f"https://cdn.nba.com/headshots/nba/latest/1040x760/{pl_nbapersonid}.png")
+        img = Image.open(BytesIO(response.content))
+        st.image(img, caption= f"{player_data_df['player'].iloc[0]}", width=300)
+    except Exception as e:
+        response = requests.get(f"https://cdn.nba.com/headshots/nba/latest/1040x760/fallback.png")
+        img = Image.open(BytesIO(response.content))
+        st.image(img, caption=f"{player_data_df['player'].iloc[0]} (No image available)", width=300)
+
+
 
 
 with open("dataframe_all.pkl","rb") as file:
     dataframe_all = pickle.load(file)["dataframe"]
+
 
 #List of all possible names
 names = dataframe_all["player"].unique()
@@ -71,6 +88,10 @@ selected_player = st.selectbox('Select a player:', options=filtered_players)
 
 player_data = dataframe_all[dataframe_all["player"]==selected_player]
 
+left_co, cent_co,last_co = st.columns(3)
+
+with cent_co:
+    display_image_from_url(player_data)
 #Career averages hex plot
 games_pl = player_data["games"].sum()
 ppg_career = player_data["points"].sum() / games_pl
@@ -78,11 +99,11 @@ reb_career = player_data["tot_reb"].sum() / games_pl
 ast_career = player_data["ast"].sum() / games_pl
 ste_career = player_data["steals"].sum() / games_pl
 blo_career = player_data["blocks"].sum() / games_pl
-tov_career = player_data["tov"].sum() / games_pl
-player_av_stats = [ppg_career,reb_career,ast_career,ste_career,blo_career,tov_career]
+efg_career = player_data["efg"].mean()
+player_av_stats = [ppg_career,reb_career,ast_career,ste_career,blo_career,efg_career]
 
-league_max = [dataframe_all["points"].max()/82,dataframe_all["ast"].max()/82,dataframe_all["tot_reb"].max()/82,dataframe_all["steals"].max()/82,dataframe_all["blocks"].max()/82,dataframe_all["tov"].max()/82]
-labels = ["ppg","astpg","rebpg","stpg","blpg","tov"]
+league_max = [dataframe_all["points"].max()/82,dataframe_all["ast"].max()/82,dataframe_all["tot_reb"].max()/82,dataframe_all["steals"].max()/82,dataframe_all["blocks"].max()/82,dataframe_all["efg"].max()]
+labels = ["ppg","astpg","rebpg","stpg","blpg","efg"]
 proportions = [player_av_stats[i]/league_max[i] for i in range(len(league_max))]
 #hex_plot2(proportions,labels)
 
@@ -93,8 +114,8 @@ reb_peak_career = player_data["tot_reb"].max() / 82
 ast_peak_career = player_data["ast"].max() / 82
 ste_peak_career = player_data["steals"].max() / 82
 blo_peak_career = player_data["blocks"].max() / 82
-tov_peak_career = player_data["tov"].max() / 82
-player_peak_stats = [ppg_peak_career,reb_peak_career,ast_peak_career,ste_peak_career,blo_peak_career,tov_peak_career]
+efg_peak_career = player_data["efg"].max()
+player_peak_stats = [ppg_peak_career,reb_peak_career,ast_peak_career,ste_peak_career,blo_peak_career,efg_peak_career]
 
 proportions_peak = [player_peak_stats[i]/league_max[i] for i in range(len(league_max))]
 hex_plot2(proportions, proportions_peak,labels)
