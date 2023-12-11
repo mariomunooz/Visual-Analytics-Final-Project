@@ -109,6 +109,7 @@ proportions = [player_av_stats[i]/league_max[i] for i in range(len(league_max))]
 
 
 #Career peak
+
 ppg_peak_career = player_data["points"].max() / 82
 reb_peak_career = player_data["tot_reb"].max() / 82
 ast_peak_career = player_data["ast"].max() / 82
