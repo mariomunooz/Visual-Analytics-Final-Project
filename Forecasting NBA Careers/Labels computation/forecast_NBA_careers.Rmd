@@ -1,6 +1,6 @@
 ---
 title: "Using Random Forests to Forecast NBA Careers"
-author: "Mario Muñoz Serrano and Gael Ribes"
+author: "Mario Muñoz Serrano"
 date: "`r format(Sys.Date(), '%m/%d/%y')`"
 output:
   html_document: default
